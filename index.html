@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Family Tree with Marriage Nodes</title>
+    <title>Family Tree with Profile Boxes</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
         body {
@@ -97,33 +97,34 @@
             padding: 20px;
         }
 
-        .node circle {
+        .node .profile-box {
             fill: url(#personGradient);
             stroke: #3b82f6;
             stroke-width: 3px;
+            rx: 10;
+            ry: 10;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             filter: drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
         }
 
-        .node.marriage rect {
+        .node.marriage .profile-box {
             fill: url(#marriageGradient);
             stroke: #ef4444;
             stroke-width: 2.5px;
-            rx: 8;
-            ry: 8;
+            rx: 10;
+            ry: 10;
             filter: drop-shadow(0 4px 8px rgba(239, 68, 68, 0.3)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .node circle:hover {
+        .node .profile-box:hover {
             fill: url(#personHoverGradient);
             stroke: #1d4ed8;
             stroke-width: 4px;
-            transform: scale(1.15);
+            transform: scale(1.05);
             filter: drop-shadow(0 8px 16px rgba(59, 130, 246, 0.4)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
         }
 
-        .node.marriage rect:hover {
+        .node.marriage .profile-box:hover {
             fill: url(#marriageHoverGradient);
             stroke: #dc2626;
             stroke-width: 3.5px;
@@ -131,23 +132,39 @@
             filter: drop-shadow(0 8px 16px rgba(239, 68, 68, 0.4)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
         }
 
-        .node text {
-            font: 12px sans-serif;
+        .node .profile-photo {
+            fill: #e5e7eb;
+            stroke: #d1d5db;
+            stroke-width: 1;
+            rx: 5;
+            ry: 5;
+        }
+
+        .node .photo-placeholder {
+            fill: #9ca3af;
+            font-size: 24px;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+
+        .node .name-text {
+            font: 11px sans-serif;
             font-weight: 600;
             text-anchor: middle;
             fill: #333;
+            dominant-baseline: central;
         }
 
-        .node.marriage text {
-            font-size: 10px;
+        .node.marriage .name-text {
+            font-size: 9px;
             fill: #666;
         }
 
-        .node.collapsed circle {
+        .node.collapsed .profile-box {
             fill: url(#personCollapsedGradient);
         }
 
-        .node.collapsed.marriage rect {
+        .node.collapsed.marriage .profile-box {
             fill: url(#marriageCollapsedGradient);
         }
 
@@ -208,15 +225,15 @@
         }
 
         .legend-symbol {
-            width: 22px;
-            height: 22px;
+            width: 30px;
+            height: 30px;
             margin-right: 12px;
-            border-radius: 50%;
+            border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .legend-symbol.marriage {
-            border-radius: 5px;
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -290,7 +307,7 @@
                                                 { "name": "महिमा" }
                                             ]
                                         },
-                                        { 
+                                        {
                                             "name": "राम केवल",
                                             "note": "They have 2 daughters, names are in order of their birth",
                                             "children": [
@@ -298,7 +315,7 @@
                                                 { "name": "रीमा" }
                                             ]
                                         },
-                                        { 
+                                        {
                                             "name": "रामावती",
                                             "note": "They have 2 son and a daughter, names are in order of their birth",
                                             "children": [
@@ -519,8 +536,8 @@
             nodes = treeData.descendants();
             links = treeData.descendants().slice(1);
 
-            // Normalize for fixed-depth (top to bottom)
-            nodes.forEach(d => d.y = d.depth * 150);
+            // Normalize for fixed-depth (top to bottom) with more spacing
+            nodes.forEach(d => d.y = d.depth * 180);
 
             // Update nodes
             const node = g.selectAll("g.node")
@@ -534,34 +551,75 @@
                 .on("mouseover", showTooltip)
                 .on("mouseout", hideTooltip);
 
-            // Add shapes for nodes
+            // Add profile boxes for nodes
             nodeEnter.each(function (d) {
                 const nodeGroup = d3.select(this);
 
-                if (d.data.type === "marriage") {
-                    // Rectangle for marriage nodes
+                // Main profile box
+                const boxWidth = d.data.type === "marriage" ? 120 : 80;
+                const boxHeight = d.data.type === "marriage" ? 40 : 60;
+
+                nodeGroup.append("rect")
+                    .attr("class", "profile-box")
+                    .attr("width", boxWidth)
+                    .attr("height", boxHeight)
+                    .attr("x", -boxWidth / 2)
+                    .attr("y", -boxHeight / 2);
+
+                if (d.data.type !== "marriage") {
+                    // Photo placeholder area for person nodes
                     nodeGroup.append("rect")
-                        .attr("width", 1e-6)
-                        .attr("height", 1e-6)
-                        .attr("x", -50)
-                        .attr("y", -12)
-                        .style("fill", d => d._children ? "url(#marriageCollapsedGradient)" : "url(#marriageGradient)");
-                } else {
-                    // Circle for person nodes
-                    nodeGroup.append("circle")
-                        .attr("r", 1e-6)
-                        .style("fill", d => d._children ? "url(#personCollapsedGradient)" : "url(#personGradient)");
+                        .attr("class", "profile-photo")
+                        .attr("width", 60)
+                        .attr("height", 35)
+                        .attr("x", -30)
+                        .attr("y", -25);
+
+                    // Photo placeholder icon (person symbol)
+                    nodeGroup.append("text")
+                        .attr("class", "photo-placeholder")
+                        .attr("x", 0)
+                        .attr("y", -8)
+                        .text("👤");
                 }
             });
 
-            // Add text labels
+            // Add name text inside the box (below photo for person nodes, center for marriage nodes)
             nodeEnter.append("text")
-                .attr("dy", d => d.data.type === "marriage" ? "0.35em" : "1.5em")
+                .attr("class", "name-text")
                 .attr("x", 0)
-                .attr("text-anchor", "middle")
+                .attr("y", d => d.data.type === "marriage" ? 8 : 15)
                 .text(d => d.data.name)
-                .style("fill-opacity", 1e-6)
-                .style("font-size", d => d.data.type === "marriage" ? "10px" : "12px");
+                .each(function (d) {
+                    // Word wrap for long names
+                    const text = d3.select(this);
+                    const words = d.data.name.split(/\s+/);
+                    const lineHeight = 1.1; // ems
+                    const maxWidth = d.data.type === "marriage" ? 110 : 65;
+
+                    text.text(null);
+
+                    let line = [];
+                    let lineNumber = 0;
+                    let tspan = text.append("tspan")
+                        .attr("x", 0)
+                        .attr("dy", "0em");
+
+                    words.forEach(word => {
+                        line.push(word);
+                        tspan.text(line.join(" "));
+                        if (tspan.node().getComputedTextLength() > maxWidth && line.length > 1) {
+                            line.pop();
+                            tspan.text(line.join(" "));
+                            line = [word];
+                            tspan = text.append("tspan")
+                                .attr("x", 0)
+                                .attr("dy", lineHeight + "em")
+                                .text(word);
+                            lineNumber++;
+                        }
+                    });
+                });
 
             // Update existing nodes
             const nodeUpdate = nodeEnter.merge(node);
@@ -570,26 +628,22 @@
                 .duration(750)
                 .attr("transform", d => `translate(${d.x},${d.y})`);
 
-            // Update shapes
-            nodeUpdate.selectAll("circle")
+            // Update profile boxes
+            nodeUpdate.selectAll(".profile-box")
                 .transition()
                 .duration(750)
-                .attr("r", 10)
-                .style("fill", d => d._children ? "url(#personCollapsedGradient)" : "url(#personGradient)");
+                .style("fill", d => {
+                    if (d.data.type === "marriage") {
+                        return d._children ? "url(#marriageCollapsedGradient)" : "url(#marriageGradient)";
+                    } else {
+                        return d._children ? "url(#personCollapsedGradient)" : "url(#personGradient)";
+                    }
+                });
 
-            nodeUpdate.selectAll("rect")
+            nodeUpdate.selectAll(".name-text")
                 .transition()
                 .duration(750)
-                .attr("width", 100)
-                .attr("height", 24)
-                .style("fill", d => d._children ? "url(#marriageCollapsedGradient)" : "url(#marriageGradient)");
-
-            nodeUpdate.selectAll("text")
-                .transition()
-                .duration(750)
-                .style("fill-opacity", 1)
-                .attr("x", 0)
-                .attr("text-anchor", "middle");
+                .style("fill-opacity", 1);
 
             // Remove exiting nodes
             const nodeExit = node.exit().transition()
@@ -597,14 +651,11 @@
                 .attr("transform", d => `translate(${source.x},${source.y})`)
                 .remove();
 
-            nodeExit.selectAll("circle")
-                .attr("r", 1e-6);
-
-            nodeExit.selectAll("rect")
+            nodeExit.selectAll(".profile-box")
                 .attr("width", 1e-6)
                 .attr("height", 1e-6);
 
-            nodeExit.selectAll("text")
+            nodeExit.selectAll(".name-text")
                 .style("fill-opacity", 1e-6);
 
             // Update links
@@ -717,6 +768,5 @@
         initializeTree();
     </script>
 </body>
-
 
 </html>
